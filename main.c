@@ -101,7 +101,7 @@ void test_FPU_test(void *p)
 StackType_t fpuTaskStack[1024];
 StaticTask_t fpuTaskBuffer;
 
-int main() {
+int maina() {
         rcc_config();
         gpio_config();
         NVIC_SetPriorityGrouping(4U);
@@ -113,7 +113,7 @@ int main() {
         return 0;
 }
 
-int maina()
+int main()
 {
         // Init everything
     boardInitAll();
@@ -121,7 +121,7 @@ int maina()
         initManipulators();
         // Turn on Forward kinematics calculations and Collision avoidance
         Robot.forwardKinCalcStatusFlag = 0x01;
-        Robot.collisionAvoidanceStatusFlag = 0x01;
+        Robot.collisionAvoidanceStatusFlag = 0x00;
         while (1)
         {
                 switch(getPackage())
