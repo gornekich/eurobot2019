@@ -122,12 +122,22 @@
 #define ODOMETRY_TIM_MODULE                     TIM6
 #define ODOMETRY_IRQN                           TIM6_DAC_IRQn
 #define ODOMETRY_IRQN_PRIORITY                  (configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 2)
-#define ODOMETRY_TIM_ARR                        42000
-#define ODOMETRY_TIM_PSC                        20
+#define ODOMETRY_TIM_ARR                        42000 - 1
+#define ODOMETRY_TIM_PSC                        19
+
+/*
+ * Dynamixel update status timer configuration
+ * APB2_CLK = 84000000, TIM_MULL x2, freq = 1000Hz
+ */
+#define DYNAMIXEL_TIM                           TIM8
+#define DYNAMIXEL_TIM_IRQN                      TIM8_UP_TIM13_IRQn
+#define DYNAMIXEL_TIM_IRQN_PRIORITY             (configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 2)
+#define DYNAMIXEL_TIM_ARR                       9999
+#define DYNAMIXEL_TIM_PSC                       16799
 
 /*
  * Robot operating timer
- * APB1_CLK = 64000000, TIM_PCS = 41999, TIM_ARR = 2000, freq = 1Hz
+ * APB1_CLK = 84000000, TIM_PCS = 41999, TIM_ARR = 2000, freq = 1000Hz
  */
 #define MOTOR_OPERATING_TIM                     TIM7
 #define MOTOR_OPERATING_TIM_PSC                 41999
