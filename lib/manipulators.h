@@ -1,21 +1,22 @@
 #ifndef _MANIPULATORS_H_
 #define _MANIPULATORS_H_
 
+#include <math.h>
+
 #include "stm32f4xx_ll_usart.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
 #include "terminal_cmds.h"
+#include "dev_map.h"
 
 #define STM_DRIVER_BUF_SIZE             256
 #define STM_DRIVER_STACK_DEPTH          1024
 
 #define MAX_DYN_COMMANDS                8
 #define DEFAULT_DELAY                   200
-#define RELAXATION_TIME                 10
-
-#define DYN_POS_PER_REV                 1023/300
-#define DYN_POS_TO_REV_PER_MS           6686
+#define RELAXATION_TIME                 (float) 10
+#define CONVERT_COEF_MS                 (float) 436
 
 /*
  * Set dynamixel angle command
@@ -57,6 +58,8 @@ typedef struct {
         uint16_t speed;
         uint32_t delay_ms;
         uint32_t start_time;
+        uint8_t cmd_started;
+        uint8_t cmd_completed;
         uint8_t cmd_buff[10];
 } dyn_ctrl_t;
 
@@ -70,6 +73,7 @@ typedef struct {
         uint8_t completed_cmd;
         uint8_t dyn_status;
         uint32_t current_time;
+        uint16_t dyn_pos[NUMBER_OF_DYNAMIXELS];
         dyn_ctrl_t sequence_cmd[MAX_DYN_COMMANDS];
         uint8_t stm_dr_buff[10];
         TaskHandle_t manip_notify;

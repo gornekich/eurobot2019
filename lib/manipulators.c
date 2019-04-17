@@ -31,7 +31,10 @@ static void manip_hw_config(void)
                                  MANIP_PUMP_OUTPUT_TYPE);
         LL_GPIO_SetPinPull(MANIP_PUMP_PORT, MANIP_PUMP_PIN,
                            LL_GPIO_PULL_NO);
-
+        /*
+         * Debug led
+         */
+        LL_GPIO_SetPinMode(GPIOD, LL_GPIO_PIN_15, LL_GPIO_MODE_OUTPUT);
         /*
          * Dynamixel update timer
          */
@@ -136,20 +139,26 @@ static void dyn_set_angle(uint8_t num, uint8_t id, uint16_t angle,
                           uint16_t speed)
 {
         dyn_ctrl_t *dyn = &(manip_ctrl->sequence_cmd[num]);
+        float delay_ms_f = 0;
 
         manip_ctrl->total_cmd += 1;
         dyn->id = id;
         dyn->goal_pos = angle;
+        dyn->current_pos = manip_ctrl->dyn_pos[id - 1];
+        manip_ctrl->dyn_pos[id - 1] = dyn->goal_pos;
         dyn->speed = speed;
+        dyn->cmd_started = 0;
+        dyn->cmd_completed = 0;
         if (dyn->current_pos == 0) {
                 dyn->delay_ms = DEFAULT_DELAY;
         }
         else {
-                dyn->delay_ms = ((dyn->goal_pos - dyn->current_pos) *300 / 1023)
-                                / (dyn->speed * DYN_POS_TO_REV_PER_MS)
-                                + RELAXATION_TIME;
+                delay_ms_f = fabs((float)(dyn->goal_pos - dyn->current_pos)) /
+                             (float) (dyn->speed)  * CONVERT_COEF_MS
+                             + RELAXATION_TIME;
+                dyn->delay_ms = (uint32_t) delay_ms_f;
         }
-        dyn->cmd_buff[0] = 0x01;
+        dyn->cmd_buff[0] = 0x00;
         dyn->cmd_buff[1] = (id);
         dyn->cmd_buff[2] = (uint8_t) (angle & 0xff);
         dyn->cmd_buff[3] = (uint8_t) ((angle >> 8) & 0xff);
@@ -158,31 +167,49 @@ static void dyn_set_angle(uint8_t num, uint8_t id, uint16_t angle,
         return;
 }
 
-static uint8_t dyn_update(dyn_ctrl_t *dyn_ctrl)
-{
-        if (manip_ctrl->current_time - dyn_ctrl->start_time >= dyn_ctrl->delay_ms) {
-                dyn_clr_flag(manip_ctrl, dyn_ctrl->id);
-                return 1;
-        }
-        return 0;
-}
-
-static void dyn_time_slice_operator(manip_ctrl_t *manip_ctrl)
+static void dyn_update(void)
 {
         int i = 0;
         dyn_ctrl_t *dyn = manip_ctrl->sequence_cmd;
 
         for (i = manip_ctrl->completed_cmd; i <= manip_ctrl->current_cmd; i++) {
-                dyn_update(&dyn[i]);
+                if ((manip_ctrl->current_time - dyn[i].start_time >= dyn[i].delay_ms) && 
+                    (dyn[i].cmd_started)) {
+                        dyn[i].current_pos = dyn[i].goal_pos;
+                        dyn[i].cmd_completed = 1;
+                        dyn_clr_flag(manip_ctrl, dyn[i].id);
+                }
         }
-        if (!is_dyn_flag_set(manip_ctrl, dyn[manip_ctrl->current_cmd].id)) {
+}
+
+static void cmd_update(void)
+{
+        int i = 0;
+        dyn_ctrl_t *dyn = manip_ctrl->sequence_cmd;
+
+        for (i = manip_ctrl->completed_cmd; i <= manip_ctrl->current_cmd; i++) {
+                if (dyn[i].cmd_completed == 1) 
+                        manip_ctrl->completed_cmd++;
+                else
+                        break;
+        }
+}
+
+static void dyn_time_slice_operator(manip_ctrl_t *manip_ctrl)
+{
+        dyn_ctrl_t *dyn = manip_ctrl->sequence_cmd;
+
+        dyn_update();
+        if (!(dyn[manip_ctrl->current_cmd].cmd_started) &&
+            !(is_dyn_flag_set(manip_ctrl, dyn[manip_ctrl->current_cmd].id))) {
+                dyn[manip_ctrl->current_cmd].cmd_started = 1;
                 stm_driver_send_msg(dyn[manip_ctrl->current_cmd].cmd_buff, 10);
                 dyn[manip_ctrl->current_cmd].start_time = manip_ctrl->current_time;
                 dyn_set_flag(manip_ctrl, dyn[manip_ctrl->current_cmd].id);
-                manip_ctrl->current_cmd++;
+                if (manip_ctrl->current_cmd != manip_ctrl->total_cmd - 1)
+                        manip_ctrl->current_cmd++;
         }
-        if (!is_dyn_flag_set(manip_ctrl, dyn[manip_ctrl->completed_cmd].id))
-                manip_ctrl->completed_cmd++;
+        cmd_update();
         return;
 }
 
@@ -191,6 +218,7 @@ void manipulators_manager(void *arg)
         (void) arg;
         manip_ctrl_t manip_ctrl_st;
         int i = 0;
+        uint8_t dyn_init_speeds[] = {0x01, 0x00, 0xf9, 0x00, 0xf9, 0x03, 0x00, 0x03, 0x00, 0x00};
 
         manip_ctrl_st.manip_notify = xTaskGetCurrentTaskHandle();
         manip_ctrl_st.dyn_status = 0x00;
@@ -198,13 +226,25 @@ void manipulators_manager(void *arg)
         manip_ctrl_st.total_cmd = 0;
         manip_ctrl_st.current_cmd = 0;
         manip_ctrl_st.completed_cmd = 0;
-        for (i = 0;i < MAX_DYN_COMMANDS; i++) {
+        for (i = 0; i < NUMBER_OF_DYNAMIXELS; i++) {
+                manip_ctrl_st.dyn_pos[i] = 0x0000;
+        }
+        for (i = 0; i < MAX_DYN_COMMANDS; i++) {
                 memset(manip_ctrl_st.sequence_cmd[i].cmd_buff, 0, 10);
+                manip_ctrl_st.sequence_cmd[i].goal_pos = 0x0000;
+                manip_ctrl_st.sequence_cmd[i].current_pos = 0x0000;
+                manip_ctrl_st.sequence_cmd[i].start_time = 0;
+                manip_ctrl_st.sequence_cmd[i].cmd_started = 0;
+                manip_ctrl_st.sequence_cmd[i].cmd_completed = 0;
         }
         manip_ctrl = &manip_ctrl_st;
         manip_hw_config();
         stm_driver_hw_config(&manip_ctrl_st);
         step_init();
+        /*
+         * Init all speeds
+         */
+        stm_driver_send_msg(dyn_init_speeds, 10);
 
         while (1) {
                 ulTaskNotifyTake(pdTRUE, portMAX_DELAY);

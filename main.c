@@ -13,25 +13,6 @@
 #include "odometry.h"
 #include "lib/manipulators.h"
 
-#include "Board.h"
-#include "Communication.h"
-#include "Manipulators.h"
-#include "Collision_avoidance.h"
-
-// Struct with Robot's status
-extern RobotStatus Robot;
-
-// I2C module for rangefinders
-extern I2C_Module_With_State_Typedef I2CModule;
-
-// Time of Robot start
-extern uint32_t timeOfStart;
-
-// Communication errors
-uint32_t numberOfReceivedPackages;
-uint32_t numberOfChecksumErrors;
-uint32_t numberOfSmallLengthErrors;
-
 /**
   *   System Clock Configuration
   *   The system Clock is configured as follow :
@@ -74,7 +55,7 @@ static void rcc_config()
         LL_RCC_SetAPB2Prescaler(LL_RCC_APB2_DIV_2);
 
         /* Set systick to 1ms */
-        SysTick_Config(168000000/1000);
+        //SysTick_Config(168000000/1000);
 
         /* Update CMSIS variable (which can be updated also
          * through SystemCoreClockUpdate function) */
@@ -104,41 +85,4 @@ int main() {
 
         vTaskStartScheduler();
         return 0;
-}
-
-int maina()
-{
-        // Init everything
-    boardInitAll();
-        // Upload angle values to manipulators
-        initManipulators();
-        // Turn on Forward kinematics calculations and Collision avoidance
-        Robot.forwardKinCalcStatusFlag = 0x01;
-        Robot.collisionAvoidanceStatusFlag = 0x01;
-        while (1)
-        {
-                switch(getPackage())
-                {
-                        case SMALL_LENGTH:
-                                numberOfSmallLengthErrors++;
-                                break;
-                        case WRONG_CHECKSUM:
-                                numberOfChecksumErrors++;
-                                break;
-                        case SUCCESFULL_PACKAGE:
-                                numberOfReceivedPackages++;
-                        default:
-                                break;
-                };
-                checkCommandAndExecute();
-                if (Robot.startupStatusFlag)
-                {
-                        // If time is up
-                        if (checkTimeout(timeOfStart, ROBOT_TIME_OF_MATCH_TENTH_OF_MS))
-                        {
-                                turnEverythingOff();
-                                Robot.startupStatusFlag = 0x00;
-                        }
-                }
-        }
 }

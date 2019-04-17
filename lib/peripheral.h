@@ -132,8 +132,8 @@
 #define DYNAMIXEL_TIM                           TIM8
 #define DYNAMIXEL_TIM_IRQN                      TIM8_UP_TIM13_IRQn
 #define DYNAMIXEL_TIM_IRQN_PRIORITY             (configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY + 2)
-#define DYNAMIXEL_TIM_ARR                       9999
-#define DYNAMIXEL_TIM_PSC                       16799
+#define DYNAMIXEL_TIM_ARR                       999
+#define DYNAMIXEL_TIM_PSC                       167
 
 /*
  * Robot operating timer

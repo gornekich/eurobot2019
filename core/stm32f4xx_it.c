@@ -23,6 +23,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_it.h"
+#include "stm32f4xx_ll_gpio.h"
 
 /** @addtogroup Template_Project
   * @{
@@ -77,10 +78,6 @@ __attribute__((weak)) void PendSV_Handler(void)
 {
 }
 
-__attribute__((weak)) void SysTick_Handler(void)
-{
-}
-
 /**
   * @brief  This function handles EXTI 3 interrupt request.
   * @param  None
@@ -97,6 +94,11 @@ __attribute__((weak)) void EXTI9_5_IRQHandler(void)
   */
 __attribute__((weak)) void EXTI15_10_IRQHandler(void)
 {
+}
+
+void WWDG_IRQHandler(void)
+{
+    LL_GPIO_SetOutputPin(GPIOD, LL_GPIO_PIN_15);
 }
 
 /******************* (C) COPYRIGHT 2011 STMicroelectronics *****END OF FILE****/

@@ -39,7 +39,6 @@
 #define MOTOR_CH1_PWM_PIN                   LL_GPIO_PIN_12
 #define MOTOR_CH2_PWM_PIN                   LL_GPIO_PIN_13
 #define MOTOR_CH3_PWM_PIN                   LL_GPIO_PIN_14
-#define MOTOR_CH4_PWM_PIN                   LL_GPIO_PIN_15
 #define MOTOR_CH_PWM_PIN_AF                 LL_GPIO_AF_2
 
 /* Motor direction pins */
@@ -49,8 +48,6 @@
 #define MOTOR_CH2_DIR_PIN                   LL_GPIO_PIN_15
 #define MOTOR_CH3_DIR_PORT                  GPIOE
 #define MOTOR_CH3_DIR_PIN                   LL_GPIO_PIN_10
-#define MOTOR_CH4_DIR_PORT                  GPIOE
-#define MOTOR_CH4_DIR_PIN                   LL_GPIO_PIN_14
 
 /*
  * Starting cord pinout
